@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="fr" data-theme="auto">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/shield.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="AccessManager - Gestionnaire d'Accès Internet avec interface GitHub officielle" />
+    <meta name="theme-color" content="#0969da" />
+    
+    <!-- Préchargement de la police JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    
+    <!-- Fallback pour les navigateurs qui ne supportent pas preload -->
+    <noscript>
+      <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap" rel="stylesheet">
+    </noscript>
+    
+    <title>AccessManager - Gestionnaire d'Accès Internet</title>
+    
+    <!-- Variables CSS initiales pour éviter le flash -->
+    <style>
+      /* CSS critique inline pour éviter FOUC */
+      :root {
+        --color-canvas-default: 255, 255, 255;
+        --color-fg-default: 31, 35, 40;
+      }
+      
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --color-canvas-default: 13, 17, 23;
+          --color-fg-default: 248, 250, 252;
+        }
+      }
+      
+      body {
+        font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Monaco, Consolas, 'Liberation Mono', Menlo, 'Courier New', monospace;
+        background-color: rgb(var(--color-canvas-default));
+        color: rgb(var(--color-fg-default));
+        margin: 0;
+        padding: 0;
+        overflow-x: hidden;
+      }
+      
+      .loading-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgb(var(--color-canvas-default));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+      }
+      
+      .loading-spinner {
+        width: 32px;
+        height: 32px;
+        border: 2px solid rgba(9, 105, 218, 0.3);
+        border-top: 2px solid rgb(9, 105, 218);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Écran de chargement initial -->
+    <div id="loading-screen" class="loading-screen">
+      <div class="loading-spinner"></div>
+    </div>
+    
+    <!-- Point de montage de l'application React -->
+    <div id="root"></div>
+    
+    <!-- Script pour masquer l'écran de chargement -->
+    <script>
+      // Masquer l'écran de chargement une fois que l'app React est montée
+      window.addEventListener('load', function() {
+        setTimeout(() => {
+          const loadingScreen = document.getElementById('loading-screen');
+          if (loadingScreen) {
+            loadingScreen.style.opacity = '0';
+            loadingScreen.style.transition = 'opacity 0.3s ease';
+            setTimeout(() => {
+              loadingScreen.remove();
+            }, 300);
+          }
+        }, 500);
+      });
+      
+      // Gérer le thème automatique
+      function setTheme() {
+        const theme = localStorage.getItem('github-theme') || 'auto';
+        const html = document.documentElement;
+        
+        if (theme === 'auto') {
+          const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          html.setAttribute('data-theme', isDark ? 'dark' : 'light');
+          html.classList.toggle('dark', isDark);
+        } else {
+          html.setAttribute('data-theme', theme);
+          html.classList.toggle('dark', theme === 'dark');
+        }
+      }
+      
+      setTheme();
+      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', setTheme);
+    </script>
+    
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
