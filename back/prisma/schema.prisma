@@ -1,0 +1,311 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                   String            @id @default(cuid())
+  email                String?           @unique
+  username             String?           @unique
+  hashedPassword       String?
+  firstName            String?
+  lastName             String?
+  phone                String?
+  role                 String            @default("USER")
+  isActive             Boolean           @default(true)
+  isEmailVerified      Boolean           @default(false)
+  lastLoginAt          DateTime?
+  loginAttempts        Int               @default(0)
+  lockedUntil          DateTime?
+  passwordResetToken   String?
+  passwordResetExpires DateTime?
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+  createdBy            String?
+  accessSessions       AccessSession[]
+  auditLogs            AuditLog[]
+  guestAccessCodes     GuestAccessCode[]
+  refreshTokens        RefreshToken[]
+  quotas               UserQuota[]
+  userRoles            UserRole[]
+  createdCustomRoles   CustomRole[]      @relation("CustomRoleCreatedBy")
+  updatedCustomRoles   CustomRole[]      @relation("CustomRoleUpdatedBy")
+  assignedUserRoles    UserRole[]        @relation("UserRoleAssignedBy")
+
+  @@map("users")
+}
+
+model AccessCode {
+  id               String          @id @default(cuid())
+  code             String          @unique
+  description      String?
+  isActive         Boolean         @default(true)
+  expiresAt        DateTime?
+  maxUses          Int?            @default(1)
+  currentUses      Int             @default(0)
+  dataQuotaMB      Int?
+  timeQuotaMinutes Int?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  createdBy        String?
+  accessSessions   AccessSession[]
+
+  @@map("access_codes")
+}
+
+model AccessSession {
+  id               String      @id @default(cuid())
+  userId           String?
+  accessCodeId     String?
+  ipAddress        String
+  macAddress       String?
+  deviceName       String?
+  userAgent        String?
+  status           String      @default("ACTIVE")
+  startedAt        DateTime    @default(now())
+  endedAt          DateTime?
+  lastActiveAt     DateTime    @default(now())
+  dataUsedMB       Float       @default(0)
+  timeUsedMinutes  Int         @default(0)
+  dataQuotaMB      Int?
+  timeQuotaMinutes Int?
+  location         String?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  accessCode       AccessCode? @relation(fields: [accessCodeId], references: [id])
+  user             User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("access_sessions")
+}
+
+model UserQuota {
+  id                    String    @id @default(cuid())
+  userId                String
+  quotaType             String
+  dailyLimitMB          Int?
+  weeklyLimitMB         Int?
+  monthlyLimitMB        Int?
+  dailyTimeMinutes      Int?
+  weeklyTimeMinutes     Int?
+  monthlyTimeMinutes    Int?
+  currentDailyMB        Float     @default(0)
+  currentWeeklyMB       Float     @default(0)
+  currentMonthlyMB      Float     @default(0)
+  currentDailyMinutes   Int       @default(0)
+  currentWeeklyMinutes  Int       @default(0)
+  currentMonthlyMinutes Int       @default(0)
+  validFrom             DateTime  @default(now())
+  validUntil            DateTime?
+  isActive              Boolean   @default(true)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, quotaType])
+  @@map("user_quotas")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  isRevoked Boolean  @default(false)
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String
+  entity    String?
+  entityId  String?
+  userId    String?
+  details   String?
+  ipAddress String?
+  userAgent String?
+  severity  String   @default("INFO")
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}
+
+model SystemConfig {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  description String?
+  category    String?  @default("general")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  updatedBy   String?
+
+  @@map("system_config")
+}
+
+model Statistics {
+  id                     String   @id @default(cuid())
+  date                   DateTime @unique
+  totalUsers             Int      @default(0)
+  activeUsers            Int      @default(0)
+  newUsers               Int      @default(0)
+  totalSessions          Int      @default(0)
+  activeSessions         Int      @default(0)
+  completedSessions      Int      @default(0)
+  totalDataUsedMB        Float    @default(0)
+  totalTimeUsedMinutes   Int      @default(0)
+  averageSessionDuration Int      @default(0)
+  peakConcurrentUsers    Int      @default(0)
+  peakDataUsageMB        Float    @default(0)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@map("statistics")
+}
+
+model Notification {
+  id             String    @id @default(cuid())
+  userId         String?
+  recipientEmail String?
+  title          String
+  message        String
+  type           String    @default("INFO")
+  isRead         Boolean   @default(false)
+  isSent         Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  readAt         DateTime?
+  sentAt         DateTime?
+
+  @@map("notifications")
+}
+
+model GuestAccessCode {
+  id            String          @id @default(cuid())
+  code          String          @unique
+  level         String
+  description   String?
+  createdBy     String
+  isActive      Boolean         @default(true)
+  expiresAt     DateTime
+  maxUses       Int             @default(1)
+  currentUses   Int             @default(0)
+  customQuotas  String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  lastUsedAt    DateTime?
+  createdByUser User            @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  auditLogs     GuestAuditLog[]
+  guestSessions GuestSession[]
+
+  @@map("guest_access_codes")
+}
+
+model GuestSession {
+  id                  String          @id @default(cuid())
+  accessCodeId        String
+  ipAddress           String
+  userAgent           String?
+  location            String?
+  status              String          @default("ACTIVE")
+  startedAt           DateTime        @default(now())
+  lastActivity        DateTime        @default(now())
+  expiresAt           DateTime?
+  terminatedAt        DateTime?
+  dataQuotaMB         Int
+  timeQuotaMinutes    Int
+  dataConsumedMB      Float           @default(0)
+  timeConsumedMinutes Int             @default(0)
+  warningsSent        String?
+  sessionToken        String?         @unique
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  auditLogs           GuestAuditLog[]
+  accessCode          GuestAccessCode @relation(fields: [accessCodeId], references: [id], onDelete: Cascade)
+
+  @@map("guest_sessions")
+}
+
+model GuestAuditLog {
+  id                String           @id @default(cuid())
+  guestSessionId    String?
+  guestAccessCodeId String?
+  attemptedCode     String?
+  action            String
+  result            String
+  details           String?
+  ipAddress         String
+  userAgent         String?
+  createdAt         DateTime         @default(now())
+  guestAccessCode   GuestAccessCode? @relation(fields: [guestAccessCodeId], references: [id])
+  guestSession      GuestSession?    @relation(fields: [guestSessionId], references: [id])
+
+  @@map("guest_audit_logs")
+}
+
+model Permission {
+  id              String             @id @default(cuid())
+  name            String             @unique
+  displayName     String
+  description     String?
+  resource        String
+  action          String
+  category        String
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  rolePermissions RolePermission[]
+
+  @@map("permissions")
+}
+
+model CustomRole {
+  id              String           @id @default(cuid())
+  name            String           @unique
+  description     String?
+  isActive        Boolean          @default(true)
+  createdBy       String
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  updatedBy       String?
+  createdByUser   User             @relation("CustomRoleCreatedBy", fields: [createdBy], references: [id], onDelete: Cascade)
+  updatedByUser   User?            @relation("CustomRoleUpdatedBy", fields: [updatedBy], references: [id])
+  rolePermissions RolePermission[]
+  userRoles       UserRole[]
+
+  @@map("custom_roles")
+}
+
+model RolePermission {
+  id           String     @id @default(cuid())
+  roleId       String
+  permissionId String
+  createdAt    DateTime   @default(now())
+  role         CustomRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model UserRole {
+  id         String     @id @default(cuid())
+  userId     String
+  roleId     String
+  assignedBy String
+  assignedAt DateTime   @default(now())
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role       CustomRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  assignedByUser User   @relation("UserRoleAssignedBy", fields: [assignedBy], references: [id])
+
+  @@unique([userId, roleId])
+  @@map("user_roles")
+}
